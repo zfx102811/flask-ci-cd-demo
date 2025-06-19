@@ -1,0 +1,30 @@
+name: Deploy to Alibaba Linux (root user)
+
+on:
+  push:
+    branches: [main]  # 或者你用的其他分支
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+
+    - name: SSH to server and deploy
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          cd ~/my-flask-app || git clone https://github.com/zfx102811/flask-ci-cd-demo.git ~/my-flask-app
+          cd ~/my-flask-app
+          git pull
+          docker stop flask-app || true && docker rm flask-app || true
+          docker build -t flask-app .
+          docker run -d -p 80:5000 --name flask-app flask-app
+        EOF
